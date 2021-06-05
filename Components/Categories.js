@@ -1,6 +1,6 @@
 import React from 'react'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
-import { View, Text, SafeAreaView, StyleSheet, ScrollView, Animated, PanResponder, Dimensions } from 'react-native'
+import { View, Text, SafeAreaView, StyleSheet, ScrollView, Animated, PanResponder, Dimensions, ActivityIndicator } from 'react-native'
 import { firestore } from '../Misc/firebase'
 import { colors, Head, PrimaryButton } from '../Misc/presets'
 import { Ionicons } from '@expo/vector-icons'; 
@@ -8,17 +8,20 @@ import { Ionicons } from '@expo/vector-icons';
 const height = 65;
 
 const Categories = ({navigation}) => {
-    const tasksDatabaseRef = firestore.collection('categories');
-    const query = tasksDatabaseRef.orderBy('name', 'asc').limit(80);
-    const [categories] = useCollectionData(query, {idField: 'id'})
-
+    const categoriesDatabaseRef = firestore.collection('categories');
+    const query = categoriesDatabaseRef.orderBy('name', 'asc').limit(80);
+    const [categories, loading, error] = useCollectionData(query, {idField: 'id'})
+ 
     return (
         <SafeAreaView style = {styles.safeAreaView}>
             <Head title = "Categories" navigation = {navigation}/>
             <ScrollView style = {styles.container}>
-                {categories ? categories.length > 0 ? categories.map(category => <Task key = {category.id} id = {category.id} name = {category.name} color = {category.color}/>) 
-                : <Text style = {styles.msg}>Loading...</Text> 
-                : <Text style = {styles.msg}>No Categories Added...</Text>}
+                {
+                    loading ? <View style = {{alignSelf: 'center', marginTop: '60%'}}><ActivityIndicator size = 'large' color = {colors.primary1}/></View>
+                            : error ? <Text style = {styles.msg}>Unable to fetch data...</Text>
+                                    : categories.length > 0 ? categories.map(category => <Category key = {category.id} id = {category.id} name = {category.name} color = {category.color}/>)
+                                                   : <Text style = {styles.msg}>No Tasks Added...</Text>          
+                }
             </ScrollView>
             <View style = {styles.footer}>
                 <PrimaryButton onPress = {() => navigation.navigate('Create Category')} style = {{elevation: 0}}>
@@ -31,11 +34,13 @@ const Categories = ({navigation}) => {
 
 export default Categories;
 
-const Task = ({id, name, color}) => {
+const Category = ({id, name, color}) => {
     const tasksDatabaseRef = firestore.collection('categories');
     const deleteTask = () => {
         tasksDatabaseRef.doc(id).delete()
     }
+
+    const screenWidth = Dimensions.get('window').width;
 
     const pan = React.useRef(new Animated.ValueXY()).current;
     const heightAnim = React.useRef(new Animated.Value(height)).current;
@@ -45,10 +50,11 @@ const Task = ({id, name, color}) => {
         onPanResponderGrant: () => {
         },
         onPanResponderMove: (evt, ges) => {
-            pan.setValue({x: ges.dx, y: 0})
+            if(ges.x0 > screenWidth/3){
+                pan.setValue({x: ges.dx, y: 0})
+            }
         },
         onPanResponderRelease: (evt, ges) => {
-            const screenWidth = Dimensions.get('window').width;
             if((-ges.dx) <= screenWidth/3){
                 Animated.spring(pan, {
                     toValue: {x: 0, y: 0},

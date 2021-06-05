@@ -1,6 +1,6 @@
 import React from 'react'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
-import { View, Text, SafeAreaView, StyleSheet, ScrollView, Animated, PanResponder, Dimensions } from 'react-native'
+import { View, Text, SafeAreaView, StyleSheet, ScrollView, Animated, PanResponder, Dimensions, ActivityIndicator } from 'react-native'
 import { firestore } from '../Misc/firebase'
 import { colors, Head, PrimaryButton } from '../Misc/presets'
 import { Ionicons } from '@expo/vector-icons'; 
@@ -10,15 +10,18 @@ const height = 65;
 const Tasks = ({navigation}) => {
     const tasksDatabaseRef = firestore.collection('tasks');
     const query = tasksDatabaseRef.orderBy('name', 'asc').limit(80);
-    const [tasks] = useCollectionData(query, {idField: 'id'})
-
+    const [tasks, loading, error] = useCollectionData(query, {idField: 'id'})
+ 
     return (
         <SafeAreaView style = {styles.safeAreaView}>
             <Head title = "Tasks" navigation = {navigation}/>
             <ScrollView style = {styles.container}>
-                {tasks ? tasks.length > 0 ? tasks.map(task => <Task key = {task.id} id = {task.id} name = {task.name} category = {task.category}/>) 
-                : <Text style = {styles.msg}>Loading...</Text>
-                : <Text style = {styles.msg}>No Tasks Added...</Text> }
+                {
+                    loading ? <View style = {{alignSelf: 'center', marginTop: '60%'}}><ActivityIndicator size = 'large' color = {colors.primary1}/></View> 
+                            : error ? <Text style = {styles.msg}>Unable to fetch data...</Text>
+                                    : tasks.length > 0 ? tasks.map(task => <Task key = {task.id} id = {task.id} name = {task.name} category = {task.category}/>)
+                                                   : <Text style = {styles.msg}>No Tasks Added...</Text>          
+                }
             </ScrollView>
             <View style = {styles.footer}>
                 <PrimaryButton onPress = {() => navigation.navigate('Create Task')} style = {{elevation: 0}}>
@@ -37,6 +40,8 @@ const Task = ({id, name, category}) => {
         tasksDatabaseRef.doc(id).delete()
     }
 
+    const screenWidth = Dimensions.get('window').width;
+
     const pan = React.useRef(new Animated.ValueXY()).current;
     const heightAnim = React.useRef(new Animated.Value(height)).current;
 
@@ -45,10 +50,11 @@ const Task = ({id, name, category}) => {
         onPanResponderGrant: () => {
         },
         onPanResponderMove: (evt, ges) => {
-            pan.setValue({x: ges.dx, y: 0})
+            if(ges.x0 > screenWidth/3){
+                pan.setValue({x: ges.dx, y: 0})
+            }
         },
         onPanResponderRelease: (evt, ges) => {
-            const screenWidth = Dimensions.get('window').width;
             if((-ges.dx) <= screenWidth/3){
                 Animated.spring(pan, {
                     toValue: {x: 0, y: 0},

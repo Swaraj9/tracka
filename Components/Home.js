@@ -1,5 +1,5 @@
-import React from 'react';
-import {ScrollView, View, Text, TouchableHighlight, StyleSheet, SafeAreaView} from 'react-native';
+import React, { useState } from 'react';
+import {ScrollView, View, Text, TouchableHighlight, StyleSheet, SafeAreaView, ActivityIndicator, RefreshControl} from 'react-native';
 import Task from './Item';
 import {colors, head, Head} from '../Misc/presets';
 import { firestore } from '../Misc/firebase';
@@ -14,19 +14,21 @@ const Home = ({navigation}) => {
   const currentDateTimestamp = firebase.firestore.Timestamp.fromDate(currentDate);
 
   const itemsDatabaseRef = firestore.collection('items');
-  const query = itemsDatabaseRef.where('startDate', '>=', currentDateTimestamp).orderBy('startDate', 'asc').limit(80);
+  const query = itemsDatabaseRef.where('startDate', '>=', currentDateTimestamp).orderBy('startDate', 'asc');
 
-  const [items] = useCollectionData(query, {idField: 'id'}); 
+  let [items, loading, error] = useCollectionData(query, {idField: 'id'}); 
 
   return (
     <SafeAreaView style = {styles.safeAreaView}>
         <Head title = "Today's Tasks" navigation = {navigation}/>
-        <ScrollView style = {styles.container}>
-            <View style = {styles.taskList}>
-              {items ? items.length > 0 ?
-              items.map(item => <Task key = {item.id} index = {items.indexOf(item)} id = {item.id} name = {item.name} startDate = {item.startDate} endDate = {item.endDate} category = {item.category}/>) 
-              : <Text style = {styles.msg}>No Task Added...</Text>
-              : <Text style = {styles.msg}>Loading...</Text>}
+        <ScrollView style = {styles.container}> 
+            <View style = {styles.taskList}> 
+              {
+                loading ? <View style = {{alignSelf: 'center', marginTop: '60%'}}><ActivityIndicator size = 'large' color = {colors.primary1}/></View> 
+                        : error ? <Text style = {styles.msg}>Unable to fetch data...</Text>
+                                : items.length > 0 ? items.map(item => <Task key = {item.id} index = {items.indexOf(item)} id = {item.id} name = {item.name} startDate = {item.startDate} endDate = {item.endDate} category = {item.category}/>)
+                                                   : <Text style = {styles.msg}>No Task Added...</Text>            
+              }
             </View>
         </ScrollView>
         <TouchableHighlight 

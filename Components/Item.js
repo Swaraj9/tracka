@@ -5,8 +5,10 @@ import {firestore} from '../Misc/firebase';
 import { Ionicons } from '@expo/vector-icons'; 
 
 const Item = ({id, name, startDate, endDate, category}) => {
-
+    
     const itemsDatabaseRef = firestore.collection('items');
+
+    const screenWidth = Dimensions.get('window').width;
 
     const duration = () => {
         const h = (endDate - startDate)/3600;
@@ -14,26 +16,11 @@ const Item = ({id, name, startDate, endDate, category}) => {
             return `${h} Hrs`
         }
         else{
-            const m = (h % 2) * 60;
-            if(m % 2 === 1 || m % 2 === 0){
-                if(Math.floor(h) === 0){
-                    return `${m} Mins`
-                }
-                return `${Math.floor(h)} Hrs ${m} Mins`
+            const m = (h - Math.floor(h)) * 60;
+            if(Math.floor(h) === 0){
+                return `${m} Mins`
             }
-            else{
-                const s = (m % 2) * 60;
-                if(Math.floor(h) === 0 && Math.floor(m) === 0){
-                    return `${s} Secs`
-                }
-                else if(Math.floor(h) === 0 && !Math.floor(m) === 0){
-                    return `${Math.floor(m)} Mins ${s} Secs`
-                }
-                else if(!Math.floor(h) === 0 && Math.floor(m) === 0){
-                    return `${Math.floor(h)} Hrs ${s} Secs`
-                }
-                return `${Math.floor(h)} Hrs ${Math.floor(m)} Mins ${s} Secs`
-            }
+            return `${Math.floor(h)} Hrs ${m} Mins`;
         }
     }
 
@@ -41,7 +28,6 @@ const Item = ({id, name, startDate, endDate, category}) => {
         const date = new Date(timestamp.toDate());
         const h = date.getHours();
         const m = date.getMinutes().toString();
-        const s = date.getSeconds().toString();
         const a = (h > 12 || (h === 12 && parseInt(m) > 0)) ? 'PM' : 'AM';
 
         const H = (h > 12 ? (h - 12) : h).toString();
@@ -68,10 +54,11 @@ const Item = ({id, name, startDate, endDate, category}) => {
         onPanResponderGrant: () => {
         },
         onPanResponderMove: (evt, ges) => {
-            pan.setValue({x: ges.dx, y: 0})
+            if(ges.x0 > screenWidth/3){
+                pan.setValue({x: ges.dx, y: 0})
+            }
         },
         onPanResponderRelease: (evt, ges) => {
-            const screenWidth = Dimensions.get('window').width;
             if((-ges.dx) <= screenWidth/3){
                 Animated.spring(pan, {
                     toValue: {x: 0, y: 0},

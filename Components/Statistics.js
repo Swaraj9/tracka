@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, StatusBar, Dimensions, TouchableWithoutFeedback, ScrollView, Alert } from 'react-native';
+import { SafeAreaView, View, Text, StyleSheet, StatusBar, Dimensions, TouchableWithoutFeedback, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { firestore } from '../Misc/firebase';
 import {useCollectionData} from 'react-firebase-hooks/firestore';
 import { BarChart, PieChart } from 'react-native-chart-kit';
@@ -52,52 +52,55 @@ const Statistics = ({navigation}) => {
 
     const timePeriod = (activePeriod === 'Today') ? currentDate : (activePeriod === 'This Week') ? currentWeek() : (activePeriod === 'This Month') ? currentMonth : currentDate;
     const query = itemsDatabaseRef.where('startDate', '>=', timePeriod).limit(80);
-    const [_items] = useCollectionData(query, {idField: 'id'});
+    const [_items, loading, error] = useCollectionData(query, {idField: 'id'});
 
     const items = (sortBy) => { 
         
         let sItems = _items ? _items.map(item => {return {name: item.name, category: item.category, color: item.color, duration: item.endDate - item.startDate}}) : [];
-        
+        let nItems = [];
+
         if(sortBy === 'name'){
             for (let i = 0; i < sItems.length; i++) {
-                let field = sItems[i].name;        
-                for (let j = i + 1; j < sItems.length; j++) {
-                    if(field === sItems[j].name){
-                        sItems[i].duration += sItems[j].duration;
-                        sItems.splice(j, 1)
-                    }
-                }    
+                if(!nItems.some(k => k.name === sItems[i].name)){
+                    nItems.push(sItems[i]);
+                    for (let j = i + 1; j < sItems.length; j++) {
+                        if(sItems[i].name === sItems[j].name){
+                            nItems.filter(k => k.name === sItems[i].name)[0].duration += sItems[j].duration;
+                        }
+                    }    
+                }
             }
     
-            sItems = sItems.map(i => {
+            nItems = nItems.map(i => {
                 if(i.name.length > 15){
                     const n = i.name.split('').slice(0, 10).join('') + '...';
-                    return {name: n, category: i.category, color: i.color, duration: i.duration};
+                    return {name: n, category: i.category, duration: i.duration};
                 }
                 return i;
             })
         }
         else if(sortBy === 'category'){
             for (let i = 0; i < sItems.length; i++) {
-                let field = sItems[i].category.name;        
-                for (let j = i + 1; j < sItems.length; j++) {
-                    if(field === sItems[j].category.name){
-                        sItems[i].duration += sItems[j].duration;
-                        sItems.splice(j, 1)
-                    }
-                }    
+                if(!nItems.some(k => k.category.name === sItems[i].category.name)){
+                    nItems.push(sItems[i]);
+                    for (let j = i + 1; j < sItems.length; j++) {
+                        if(sItems[i].category.name === sItems[j].category.name){
+                            nItems.filter(k => k.category.name === sItems[i].category.name)[0].duration += sItems[j].duration;
+                        }
+                    }    
+                }
             }
     
-            sItems = sItems.map(i => {
+            nItems = nItems.map(i => {
                 if(i.category.name.length > 15){
                     const c = i.category.name.split('').slice(0, 10).join('') + '...';
-                    return {name: i.name, category: {name: c, color: i.category.color}, color: i.color, duration: i.duration};
+                    return {name: i.name, category: {name: c, color: i.category.color}, duration: i.duration};
                 }
                 return i;
             })
         }
 
-        return sItems;  
+        return nItems;  
     }
 
     const barChartData = (sortBy) => {
@@ -149,60 +152,64 @@ const Statistics = ({navigation}) => {
             <ScrollView style = {styles.container}>
                 <Text style = {styles.title}>Total Task Duration</Text>
                 <View style = {styles.chartContainer}>    
-                    <Text style = {styles.title2}>By Name</Text>
-                    {items('name') ? items('name').length > 0 ?
-                    <ScrollView horizontal contentContainerStyle = {{alignItems: 'center', paddingHorizontal: 10}}> 
-                        <BarChart
-                            data = {barChartData('name')}
-                            width = {(items('name').length <= 5) ? screenWidth - 20 : screenWidth + ((items('name').length - 5) * 10)}
-                            height = {320}
-                            chartConfig = {chartConfig}
-                            style = {styles.graph}
-                            yAxisSuffix = " Hrs"
-                            verticalLabelRotation = {40}
-                            fromZero = {true}
-                            showValuesOnTopOfBars = {true}
-                        /> 
-                    </ScrollView> : <Text style = {[styles.title2, {alignSelf: 'center'}]}>No Tasks Added...</Text>
-                                  : <Text style = {[styles.title2, {alignSelf: 'center'}]}>Loading...</Text>}
+                    <Text style = {styles.title2}>By Name</Text>       
+                    {loading ? <View style = {{alignSelf: 'center'}}><ActivityIndicator size = 'large' color = {colors.primary1}/></View>
+                            : error ? <Text style = {styles.title2}>Unable to fetch data...</Text>
+                                    : items('name').length > 0 ? <ScrollView horizontal contentContainerStyle = {{alignItems: 'center', paddingHorizontal: 10}}> 
+                                                                    <BarChart
+                                                                        data = {barChartData('name')}
+                                                                        width = {(items('name').length <= 5) ? screenWidth - 20 : screenWidth + ((items('name').length - 5) * 10)}
+                                                                        height = {320}
+                                                                        chartConfig = {chartConfig}
+                                                                        style = {styles.graph}
+                                                                        yAxisSuffix = " Hrs"
+                                                                        verticalLabelRotation = {40}
+                                                                        fromZero = {true}
+                                                                        showValuesOnTopOfBars = {true}
+                                                                    /> 
+                                                                </ScrollView>
+                                                                : <Text style = {[styles.title2, {alignSelf: 'center'}]}>No Tasks Added...</Text>}
                 </View>
                 <View style = {styles.chartContainer}>    
                     <Text style = {styles.title2}>By Category</Text>
-                    {items('category') ? items('category').length > 0 ?
-                    <ScrollView horizontal contentContainerStyle = {{alignItems: 'center', paddingHorizontal: 10}}>
-                        <BarChart
-                            data = {barChartData('category')}
-                            width = {(items('category').length <= 5) ? screenWidth - 20 : screenWidth + ((items('category').length - 5) * 10)}
-                            height = {320}
-                            chartConfig = {chartConfig}
-                            style = {styles.graph}
-                            yAxisSuffix = "  Hrs"
-                            verticalLabelRotation = {40}
-                            fromZero = {true}
-                            showValuesOnTopOfBars = {true}
-                        /> 
-                    </ScrollView> : <Text style = {[styles.title2, {alignSelf: 'center'}]}>No Tasks Added...</Text>
-                                  : <Text style = {[styles.title2, {alignSelf: 'center'}]}>Loading...</Text>}
+                    {loading ? <View style = {{alignSelf: 'center'}}><ActivityIndicator size = 'large' color = {colors.primary1}/></View>
+                            : error ? <Text style = {styles.title2}>Unable to fetch data...</Text>
+                                    : items('category').length > 0 ? <ScrollView horizontal contentContainerStyle = {{alignItems: 'center', paddingHorizontal: 10}}> 
+                                                                        <BarChart
+                                                                            data = {barChartData('category')}
+                                                                            width = {(items('category').length <= 5) ? screenWidth - 20 : screenWidth + ((items('category').length - 5) * 10)}
+                                                                            height = {320}
+                                                                            chartConfig = {chartConfig}
+                                                                            style = {styles.graph}
+                                                                            yAxisSuffix = " Hrs"
+                                                                            verticalLabelRotation = {40}
+                                                                            fromZero = {true}
+                                                                            showValuesOnTopOfBars = {true}
+                                                                        /> 
+                                                                     </ScrollView>
+                                                                    : <Text style = {[styles.title2, {alignSelf: 'center'}]}>No Tasks Added...</Text>}
                 </View>
-                {<View style = {styles.chartContainer}>
-                    <Text style = {styles.title2}>Pie</Text>
-                    {items('name') && items('name').length > 0 &&
-                        <PieChart
-                            data={pieChartData()}
-                            width={screenWidth}
-                            height={200}
-                            chartConfig={chartConfig}
-                            accessor={"duration"}
-                            backgroundColor={"transparent"}
-                            paddingLeft={"15"}
-                            center={[0, 0]}
-                        />
-                    }
-                </View>}
+                <View style = {styles.chartContainer}>
+                    <Text style = {styles.title2}>Pie Chart</Text>
+                    {loading ? <View style = {{alignSelf: 'center'}}><ActivityIndicator size = 'large' color = {colors.primary1}/></View>
+                            : error ? <Text style = {styles.title2}>Unable to fetch data...</Text>
+                                    : items('category').length > 0 ? <PieChart
+                                                                        data={pieChartData()}
+                                                                        width={screenWidth}
+                                                                        height={200}
+                                                                        chartConfig={chartConfig}
+                                                                        accessor={"duration"}
+                                                                        backgroundColor={"transparent"}
+                                                                        paddingLeft={"15"}
+                                                                        center={[0, 0]}
+                                                                     /> 
+                                                                    : <Text style = {[styles.title2, {alignSelf: 'center'}]}>No Tasks Added...</Text>}
+                </View>
             </ScrollView>
         </SafeAreaView>
     )
 }
+
 
 export default Statistics
 

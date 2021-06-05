@@ -55,9 +55,6 @@ const AddTaskMenu = ({navigation}) => {
             else if(selectedQuantity === 'Minutes'){
                 absoluteDuration = duration * 60;
             }
-            else if(selectedQuantity === 'Seconds'){
-                absoluteDuration = duration;
-            }
         }
 
         setEndTime(new Date(startTime.valueOf() + (absoluteDuration * 1000)))
@@ -150,7 +147,6 @@ const AddTaskMenu = ({navigation}) => {
                         <Picker selectedValue = {selectedQuantity} onValueChange = {(quantity) => setSelectedQuantity(quantity)}>
                             <Picker.Item key = {1} label = 'Hours' value = 'Hours'/>
                             <Picker.Item key = {2} label = 'Minutes' value = 'Minutes'/>
-                            <Picker.Item key = {3} label = 'Seconds' value = 'Seconds'/>
                         </Picker>
                     </View>       
                 </View>
