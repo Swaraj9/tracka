@@ -11,9 +11,7 @@ import CreateCategoryMenu from './Components/CreateCategoryMenu';
 import Tasks from './Components/Tasks';
 import Categories from './Components/Categories';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from './Misc/presets';
  
-const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
 function CustomDrawerContent(props) {

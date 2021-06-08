@@ -20,7 +20,7 @@ const Item = ({id, name, startDate, endDate, category}) => {
             if(Math.floor(h) === 0){
                 return `${m} Mins`
             }
-            return `${Math.floor(h)} Hrs ${m} Mins`;
+            return `${Math.floor(h)} Hrs ${Math.round(m)} Mins`;
         }
     }
 
